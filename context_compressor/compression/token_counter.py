@@ -7,7 +7,7 @@ if tiktoken is not available or the model is unknown.
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from collections.abc import Sequence
 
 
 def _get_encoder(model: str):

@@ -11,7 +11,7 @@ Design principles vs. competitors:
 from __future__ import annotations
 
 import math
-from typing import List, Sequence
+from collections.abc import Sequence
 
 from context_compressor.scoring.signals import (
     SignalWeights,
@@ -70,7 +70,7 @@ class ImportanceScorer:
         self.weights.validate()
         self.recency_half_life = recency_half_life
 
-    def score(self, messages: Sequence[dict]) -> List[ScoredMessage]:
+    def score(self, messages: Sequence[dict]) -> list[ScoredMessage]:
         """
         Score all messages in a conversation.
 
@@ -80,7 +80,7 @@ class ImportanceScorer:
         Returns:
             List of ScoredMessage, same order as input.
         """
-        scored: List[ScoredMessage] = []
+        scored: list[ScoredMessage] = []
         n = len(messages)
 
         for i, msg in enumerate(messages):
@@ -149,6 +149,9 @@ class ImportanceScorer:
 
         return {
             "role": role,
-            "signals": {k: {"raw": v, "weight": w, "contribution": v * w} for k, (v, w) in signals.items()},
+            "signals": {
+                k: {"raw": v, "weight": w, "contribution": v * w}
+                for k, (v, w) in signals.items()
+            },
             "final_score": round(min(1.0, final_score), 4),
         }

@@ -15,7 +15,8 @@ Drop-in replacement: swap `openai.OpenAI()` for `OpenAIAdapter()`.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from context_compressor.compression.compressor import CompressionResult, ContextCompressor
 from context_compressor.compression.config import CompressorConfig
@@ -38,9 +39,9 @@ class OpenAIAdapter:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "gpt-4o",
-        config: Optional[CompressorConfig] = None,
+        config: CompressorConfig | None = None,
         **kwargs: Any,
     ) -> None:
         try:
@@ -55,11 +56,11 @@ class OpenAIAdapter:
         self._default_model = model
         cfg = config or CompressorConfig.for_model(model)
         self._compressor = ContextCompressor(cfg)
-        self.last_compression: Optional[CompressionResult] = None
+        self.last_compression: CompressionResult | None = None
         # Expose chat.completions interface
         self.chat = _ChatNamespace(self)
 
-    def _compress(self, messages: Sequence[dict], model: Optional[str] = None) -> List[dict]:
+    def _compress(self, messages: Sequence[dict], model: str | None = None) -> list[dict]:
         result = self._compressor.compress_with_stats(messages)
         self.last_compression = result
         return result.messages

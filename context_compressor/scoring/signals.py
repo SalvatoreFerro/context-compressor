@@ -5,9 +5,8 @@ Each signal contributes a score in [0, 1] range.
 Final score is a weighted sum, normalized to [0, 1].
 """
 
-from dataclasses import dataclass, field
-from typing import List
 import re
+from dataclasses import dataclass
 
 
 @dataclass
@@ -121,7 +120,7 @@ def question_density(text: str) -> float:
 
 
 # Registry for easy iteration
-SIGNAL_EXTRACTORS: List[str] = [
+SIGNAL_EXTRACTORS: list[str] = [
     "numeric",
     "explicit",
     "named_entity",

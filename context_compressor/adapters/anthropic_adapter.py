@@ -3,16 +3,21 @@ Anthropic adapter — wraps the Anthropic client with automatic context compress
 
     # Before
     client = anthropic.Anthropic(api_key="...")
-    response = client.messages.create(model="claude-3-5-sonnet-20241022", messages=messages, max_tokens=1024)
+    response = client.messages.create(
+        model="claude-3-5-sonnet-20241022", messages=messages, max_tokens=1024
+    )
 
     # After
     client = AnthropicAdapter(api_key="...", model="claude-3-5-sonnet-20241022")
-    response = client.messages.create(model="claude-3-5-sonnet-20241022", messages=messages, max_tokens=1024)
+    response = client.messages.create(
+        model="claude-3-5-sonnet-20241022", messages=messages, max_tokens=1024
+    )
 """
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from context_compressor.compression.compressor import CompressionResult, ContextCompressor
 from context_compressor.compression.config import CompressorConfig
@@ -38,9 +43,9 @@ class AnthropicAdapter:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "claude-3-5-sonnet-20241022",
-        config: Optional[CompressorConfig] = None,
+        config: CompressorConfig | None = None,
         **kwargs: Any,
     ) -> None:
         try:
@@ -55,10 +60,10 @@ class AnthropicAdapter:
         self._default_model = model
         cfg = config or CompressorConfig.for_model(model)
         self._compressor = ContextCompressor(cfg)
-        self.last_compression: Optional[CompressionResult] = None
+        self.last_compression: CompressionResult | None = None
         self.messages = _MessagesNamespace(self)
 
-    def _compress(self, messages: Sequence[dict]) -> List[dict]:
+    def _compress(self, messages: Sequence[dict]) -> list[dict]:
         result = self._compressor.compress_with_stats(messages)
         self.last_compression = result
         return result.messages

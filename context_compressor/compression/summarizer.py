@@ -14,7 +14,7 @@ you can plug in your own LLM-based summarizer via the `Summarizer` protocol.
 from __future__ import annotations
 
 import re
-from typing import List, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -51,7 +51,7 @@ class ExtractiveSummarizer:
         scored.sort(key=lambda x: -x[0])
 
         # Greedily pick top sentences within budget
-        selected: List[tuple] = []
+        selected: list[tuple] = []
         budget = max_chars
 
         for score, idx, sentence in scored:
@@ -69,7 +69,7 @@ class ExtractiveSummarizer:
         selected.sort(key=lambda x: x[0])
         return " ".join(s for _, s in selected)
 
-    def _split_sentences(self, text: str) -> List[str]:
+    def _split_sentences(self, text: str) -> list[str]:
         sentences = self._SENTENCE_RE.split(text.strip())
         return [s.strip() for s in sentences if s.strip()]
 

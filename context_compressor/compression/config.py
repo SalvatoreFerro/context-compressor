@@ -5,7 +5,6 @@ CompressorConfig — all tuneable parameters in one place.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from context_compressor.scoring.signals import SignalWeights
 
@@ -68,7 +67,7 @@ class CompressorConfig:
         self.signal_weights.validate()
 
     @classmethod
-    def for_model(cls, model: str, max_tokens: Optional[int] = None) -> "CompressorConfig":
+    def for_model(cls, model: str, max_tokens: int | None = None) -> CompressorConfig:
         """
         Preset configs for common models.
 

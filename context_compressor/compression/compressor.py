@@ -19,8 +19,8 @@ Drop-in replacement for raw messages[] passing.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, Optional, Sequence
 
 from context_compressor.compression.config import CompressorConfig
 from context_compressor.compression.summarizer import ExtractiveSummarizer, Summarizer
@@ -46,7 +46,7 @@ class CompressionResult:
         compression_ratio: compressed / original (lower = more compressed).
     """
 
-    messages: List[dict]
+    messages: list[dict]
     original_token_count: int
     compressed_token_count: int
     messages_kept: int
@@ -107,8 +107,8 @@ class ContextCompressor:
 
     def __init__(
         self,
-        config: Optional[CompressorConfig] = None,
-        summarizer: Optional[Summarizer] = None,
+        config: CompressorConfig | None = None,
+        summarizer: Summarizer | None = None,
     ) -> None:
         self.config = config or CompressorConfig()
         self.config.validate()
@@ -118,7 +118,7 @@ class ContextCompressor:
         )
         self.summarizer = summarizer or ExtractiveSummarizer()
 
-    def compress(self, messages: Sequence[dict]) -> List[dict]:
+    def compress(self, messages: Sequence[dict]) -> list[dict]:
         """
         Compress a conversation to fit within max_tokens.
 
@@ -165,9 +165,10 @@ class ContextCompressor:
             always_keep.add(i)
 
         # Decide fate of each message
-        # Each entry: (original_index, score, msg_dict) — index carried through for budget enforcement
+        # Each entry: (original_index, score, msg_dict)
+        # Index is carried through for correct budget enforcement after summarization
         kept, summarized, dropped = 0, 0, 0
-        output_entries: List[tuple] = []  # (original_index, score, msg_dict)
+        output_entries: list[tuple] = []  # (original_index, score, msg_dict)
 
         for sm in scored:
             if sm.index in always_keep:
@@ -208,9 +209,9 @@ class ContextCompressor:
 
     def _enforce_budget(
         self,
-        output_entries: List[tuple],
+        output_entries: list[tuple],
         always_keep: set,
-    ) -> List[tuple]:
+    ) -> list[tuple]:
         """
         Iteratively drop lowest-scored messages until we're within budget.
 
@@ -242,7 +243,7 @@ class ContextCompressor:
 
         return [(idx, score, msg) for idx, score, msg in output_entries if idx not in to_drop]
 
-    def explain(self, messages: Sequence[dict]) -> List[dict]:
+    def explain(self, messages: Sequence[dict]) -> list[dict]:
         """
         Debug tool: returns scoring breakdown for each message.
 
