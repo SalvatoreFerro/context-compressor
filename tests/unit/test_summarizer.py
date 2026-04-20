@@ -1,6 +1,7 @@
 """Unit tests for ExtractiveSummarizer."""
 
 import pytest
+
 from context_compressor.compression.summarizer import ExtractiveSummarizer
 
 

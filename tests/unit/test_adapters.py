@@ -16,7 +16,6 @@ import pytest
 
 from context_compressor.compression.config import CompressorConfig
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def make_long_conversation(n: int = 30) -> list:
@@ -34,6 +33,7 @@ class TestOpenAIAdapter:
         """Raises ImportError with helpful message when openai not installed."""
         with patch.dict(sys.modules, {"openai": None}):
             from importlib import reload
+
             import context_compressor.adapters.openai_adapter as mod
             with pytest.raises(ImportError, match="openai package"):
                 reload(mod)
@@ -60,7 +60,10 @@ class TestOpenAIAdapter:
             assert mock_client.chat.completions.create.called
             # Messages passed to API are <= original (compression happened or fast-path)
             call_args = mock_client.chat.completions.create.call_args
-            sent_messages = call_args.kwargs.get("messages") or call_args.args[0] if call_args.args else []
+            sent_messages = (
+                call_args.kwargs.get("messages")
+                or (call_args.args[0] if call_args.args else [])
+            )
             assert len(sent_messages) <= len(long_messages)
 
     def test_last_compression_populated(self):
@@ -120,6 +123,7 @@ class TestAnthropicAdapter:
         """Raises ImportError with helpful message when anthropic not installed."""
         with patch.dict(sys.modules, {"anthropic": None}):
             from importlib import reload
+
             import context_compressor.adapters.anthropic_adapter as mod
             with pytest.raises(ImportError, match="anthropic package"):
                 reload(mod)
@@ -202,3 +206,31 @@ class TestAnthropicAdapter:
             from context_compressor.adapters.anthropic_adapter import AnthropicAdapter
             adapter = AnthropicAdapter(api_key="test", config=CompressorConfig(max_tokens=512))
             assert adapter.raw_client is mock_client
+
+    def test_multiple_system_messages_concatenated(self):
+        """Multiple system messages should be concatenated, not overwritten."""
+        mock_anthropic = MagicMock()
+        mock_client = MagicMock()
+        mock_anthropic.Anthropic.return_value = mock_client
+        mock_client.messages.create.return_value = MagicMock()
+
+        with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
+            from context_compressor.adapters.anthropic_adapter import AnthropicAdapter
+            adapter = AnthropicAdapter(
+                api_key="test",
+                config=CompressorConfig(max_tokens=4096),
+            )
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": "Always respond in English."},
+                {"role": "user", "content": "Hello"},
+            ]
+            adapter.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                messages=messages,
+                max_tokens=1024,
+            )
+            call_kwargs = mock_client.messages.create.call_args.kwargs
+            system_val = call_kwargs.get("system")
+            assert "You are a helpful assistant." in system_val
+            assert "Always respond in English." in system_val

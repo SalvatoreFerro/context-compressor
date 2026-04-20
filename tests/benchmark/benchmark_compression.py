@@ -15,22 +15,26 @@ No API keys required — fully offline.
 from __future__ import annotations
 
 import time
-from typing import List
 
 from context_compressor.compression.compressor import ContextCompressor
 from context_compressor.compression.config import CompressorConfig
 from context_compressor.compression.token_counter import count_messages_tokens
 
-
 # ── Test conversations ──────────────────────────────────────────────────────
 
-FACT_RICH_CONVERSATION: List[dict] = [
+FACT_RICH_CONVERSATION: list[dict] = [
     {"role": "system", "content": "You are a project management assistant."},
     {"role": "user", "content": "Hi, I need help with our Q4 project."},
     {"role": "assistant", "content": "Sure, I'm happy to help. What's the project about?"},
-    {"role": "user", "content": "It's a data pipeline. Our budget is $85,000 and deadline is 2025-12-01."},
+    {
+        "role": "user",
+        "content": "It's a data pipeline. Our budget is $85,000 and deadline is 2025-12-01.",
+    },
     {"role": "assistant", "content": "Got it. $85,000 budget, December 1st deadline."},
-    {"role": "user", "content": "We're using Python 3.12 and Apache Kafka for the streaming layer."},
+    {
+        "role": "user",
+        "content": "We're using Python 3.12 and Apache Kafka for the streaming layer.",
+    },
     {"role": "assistant", "content": "Good choices. Kafka handles high-throughput streaming well."},
     {"role": "user", "content": "sounds good"},
     {"role": "assistant", "content": "Let me know if you have questions."},
@@ -38,7 +42,10 @@ FACT_RICH_CONVERSATION: List[dict] = [
     {"role": "assistant", "content": "Sure."},
     {"role": "user", "content": "yep"},
     {"role": "assistant", "content": "Okay."},
-    {"role": "user", "content": "Critical: the team lead is Maria Chen, she must approve all PRs."},
+    {
+        "role": "user",
+        "content": "Critical: the team lead is Maria Chen, she must approve all PRs.",
+    },
     {"role": "assistant", "content": "Noted. Maria Chen must approve all pull requests."},
     {"role": "user", "content": "yeah"},
     {"role": "assistant", "content": "Understood."},
@@ -56,15 +63,18 @@ KEY_FACTS = [
     "no AWS",
 ]
 
-LONG_CHATTER_CONVERSATION: List[dict] = [
+LONG_CHATTER_CONVERSATION: list[dict] = [
     {"role": "system", "content": "You are a helpful assistant."},
 ] + [
-    {"role": "user" if i % 2 == 0 else "assistant", "content": f"Message {i}: " + ("okay " * 15)}
+    {
+        "role": "user" if i % 2 == 0 else "assistant",
+        "content": f"Message {i}: " + ("okay " * 15),
+    }
     for i in range(50)
 ]
 
 
-def naive_truncation(messages: List[dict], max_tokens: int) -> List[dict]:
+def naive_truncation(messages: list[dict], max_tokens: int) -> list[dict]:
     """Baseline: keep only the most recent messages that fit."""
     result = []
     tokens = 0
@@ -77,7 +87,7 @@ def naive_truncation(messages: List[dict], max_tokens: int) -> List[dict]:
     return result
 
 
-def check_fact_retention(messages: List[dict], facts: List[str]) -> dict:
+def check_fact_retention(messages: list[dict], facts: list[str]) -> dict:
     all_content = " ".join(m.get("content", "") for m in messages)
     retained = [f for f in facts if f in all_content]
     return {
@@ -120,23 +130,37 @@ def run_benchmark():
             naive_tokens = count_messages_tokens(naive)
 
             print(f"\n  {config_name}")
-            print(f"  context-compressor:")
-            print(f"    tokens:    {result.original_token_count} → {result.compressed_token_count} ({result.compression_ratio:.0%})")
-            print(f"    kept/sum/drop: {result.messages_kept}/{result.messages_summarized}/{result.messages_dropped}")
+            print("  context-compressor:")
+            orig = result.original_token_count
+            comp = result.compressed_token_count
+            ratio = result.compression_ratio
+            print(f"    tokens:    {orig} → {comp} ({ratio:.0%})")
+            kept = result.messages_kept
+            summ = result.messages_summarized
+            drop = result.messages_dropped
+            print(f"    kept/sum/drop: {kept}/{summ}/{drop}")
             print(f"    time:      {elapsed_ms:.1f}ms")
 
             if facts:
                 retention = check_fact_retention(result.messages, facts)
-                print(f"    fact retention: {retention['retention_rate']:.0%} ({len(retention['retained'])}/{len(facts)} facts)")
+                rate = retention["retention_rate"]
+                n_ret = len(retention["retained"])
+                print(f"    fact retention: {rate:.0%} ({n_ret}/{len(facts)} facts)")
                 if retention["dropped"]:
                     print(f"    dropped facts: {retention['dropped']}")
 
-            print(f"  naive truncation:")
-            print(f"    tokens:    {original_tokens} → {naive_tokens} ({naive_tokens/original_tokens:.0%})")
+            print("  naive truncation:")
+            naive_ratio = naive_tokens / original_tokens
+            print(f"    tokens:    {original_tokens} → {naive_tokens} ({naive_ratio:.0%})")
             print(f"    messages:  {len(messages)} → {len(naive)}")
             if facts:
                 naive_retention = check_fact_retention(naive, facts)
-                print(f"    fact retention: {naive_retention['retention_rate']:.0%} ({len(naive_retention['retained'])}/{len(facts)} facts)")
+                n_rate = naive_retention["retention_rate"]
+                n_ret = len(naive_retention["retained"])
+                print(
+                    f"    fact retention: {n_rate:.0%} "
+                    f"({n_ret}/{len(facts)} facts)"
+                )
 
     print("\n" + "=" * 60)
     print("Benchmark complete.")

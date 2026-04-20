@@ -1,6 +1,7 @@
 """Unit tests for ContextCompressor."""
 
 import pytest
+
 from context_compressor.compression.compressor import ContextCompressor
 from context_compressor.compression.config import CompressorConfig
 
@@ -84,7 +85,10 @@ class TestHighImportancePreserved:
         compressor = ContextCompressor(CompressorConfig(max_tokens=300, always_preserve_last_n=1))
         important_msg = {
             "role": "user",
-            "content": "Remember: the project budget is $150,000 and deadline is 2025-12-31. Critical constraint.",
+            "content": (
+                "Remember: the project budget is $150,000"
+                " and deadline is 2025-12-31. Critical constraint."
+            ),
         }
         filler = make_messages(20, content="okay sounds good")
         messages = [important_msg] + filler
@@ -97,7 +101,10 @@ class TestHighImportancePreserved:
         compressor = ContextCompressor(CompressorConfig(max_tokens=500, always_preserve_last_n=1))
         code_msg = {
             "role": "assistant",
-            "content": "```python\ndef authenticate(user_id: str) -> bool:\n    return db.check(user_id)\n```",
+            "content": (
+                "```python\ndef authenticate(user_id: str) -> bool:\n"
+                "    return db.check(user_id)\n```"
+            ),
         }
         filler = make_messages(15, content="ok thanks")
         messages = filler + [code_msg]
@@ -143,4 +150,16 @@ class TestConfig:
 
     def test_invalid_threshold_raises(self):
         with pytest.raises(ValueError):
-            CompressorConfig(preserve_threshold=0.2, compress_threshold=0.8).validate()
+            CompressorConfig(
+                preserve_threshold=0.2, compress_threshold=0.8
+            ).validate()
+
+
+class TestExports:
+    def test_compression_result_importable(self):
+        from context_compressor import CompressionResult
+        assert CompressionResult is not None
+
+    def test_signal_weights_importable(self):
+        from context_compressor import SignalWeights
+        assert SignalWeights is not None

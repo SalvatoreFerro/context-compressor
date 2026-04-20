@@ -90,11 +90,13 @@ class _MessagesNamespace:
         messages = list(messages)
 
         # Extract system messages (Anthropic requires them as a separate param)
-        system_content = None
+        system_parts: list[str] = []
         non_system = []
         for msg in messages:
             if msg.get("role") == "system":
-                system_content = msg.get("content", "")
+                content = msg.get("content", "")
+                if content:
+                    system_parts.append(content)
             else:
                 non_system.append(msg)
 
@@ -102,8 +104,8 @@ class _MessagesNamespace:
 
         # Build final kwargs
         call_kwargs = dict(kwargs)
-        if system_content and "system" not in call_kwargs:
-            call_kwargs["system"] = system_content
+        if system_parts and "system" not in call_kwargs:
+            call_kwargs["system"] = "\n\n".join(system_parts)
 
         return self._adapter._client.messages.create(
             messages=compressed, **call_kwargs
