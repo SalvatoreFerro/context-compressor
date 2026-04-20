@@ -156,10 +156,10 @@ def run_benchmark():
             if facts:
                 naive_retention = check_fact_retention(naive, facts)
                 n_rate = naive_retention["retention_rate"]
-                n_ret = len(naive_retention["retained"])
+                naive_ret_count = len(naive_retention["retained"])
                 print(
                     f"    fact retention: {n_rate:.0%} "
-                    f"({n_ret}/{len(facts)} facts)"
+                    f"({naive_ret_count}/{len(facts)} facts)"
                 )
 
     print("\n" + "=" * 60)

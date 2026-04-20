@@ -29,7 +29,11 @@ class ScoredMessage:
     __slots__ = ("role", "content", "score", "index", "_original_msg")
 
     def __init__(
-        self, role: str, content: str, score: float, index: int,
+        self,
+        role: str,
+        content: str,
+        score: float,
+        index: int,
         original_msg: dict | None = None,
     ) -> None:
         self.role = role
