@@ -1,6 +1,7 @@
 """Unit tests for ImportanceScorer."""
 
 import pytest
+
 from context_compressor.scoring.scorer import ImportanceScorer
 from context_compressor.scoring.signals import SignalWeights
 
@@ -92,6 +93,20 @@ class TestCodeSignal:
         assert code_density("import numpy as np") > 0
 
 
+class TestQuestionSignal:
+    def test_single_question_mark(self):
+        from context_compressor.scoring.signals import question_density
+        assert question_density("What is this?") == 0.5
+
+    def test_multiple_question_marks(self):
+        from context_compressor.scoring.signals import question_density
+        assert question_density("What? Really?") == 1.0
+
+    def test_no_question(self):
+        from context_compressor.scoring.signals import question_density
+        assert question_density("This is a statement.") == 0.0
+
+
 class TestScoreBreakdown:
     def test_breakdown_returns_all_signals(self, scorer):
         msg = {"role": "user", "content": "Remember: the budget is $50,000"}
@@ -129,3 +144,44 @@ class TestCustomWeights:
         with pytest.raises(ValueError, match="sum to 1.0"):
             w = SignalWeights(recency_weight=0.9)
             w.validate()
+
+
+class TestEdgeCases:
+    def test_none_content_handled(self, scorer):
+        """Messages with None content should not crash."""
+        messages = [{"role": "user", "content": None}]
+        scored = scorer.score(messages)
+        assert scored[0].score >= 0.0
+        assert scored[0].content == ""
+
+    def test_empty_content_handled(self, scorer):
+        """Messages with empty content should not crash."""
+        messages = [{"role": "user", "content": ""}]
+        scored = scorer.score(messages)
+        assert scored[0].score >= 0.0
+
+    def test_missing_content_key(self, scorer):
+        """Messages without a content key should be handled gracefully."""
+        messages = [{"role": "user"}]
+        scored = scorer.score(messages)
+        assert scored[0].score >= 0.0
+        assert scored[0].content == ""
+
+    def test_to_dict_preserves_extra_fields(self, scorer):
+        """ScoredMessage.to_dict() should preserve all original message fields."""
+        messages = [
+            {"role": "user", "content": "hello", "name": "Alice"},
+        ]
+        scored = scorer.score(messages)
+        d = scored[0].to_dict()
+        assert d["name"] == "Alice"
+        assert d["role"] == "user"
+        assert d["content"] == "hello"
+
+    def test_to_dict_without_original_msg(self):
+        """ScoredMessage without original_msg falls back to role/content."""
+        from context_compressor.scoring.scorer import ScoredMessage
+
+        sm = ScoredMessage(role="user", content="hi", score=0.5, index=0)
+        d = sm.to_dict()
+        assert d == {"role": "user", "content": "hi"}

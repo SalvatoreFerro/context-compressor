@@ -26,15 +26,25 @@ from context_compressor.scoring.signals import (
 class ScoredMessage:
     """A conversation message with its computed importance score."""
 
-    __slots__ = ("role", "content", "score", "index")
+    __slots__ = ("role", "content", "score", "index", "_original_msg")
 
-    def __init__(self, role: str, content: str, score: float, index: int) -> None:
+    def __init__(
+        self,
+        role: str,
+        content: str,
+        score: float,
+        index: int,
+        original_msg: dict | None = None,
+    ) -> None:
         self.role = role
         self.content = content
         self.score = score
         self.index = index
+        self._original_msg = original_msg
 
     def to_dict(self) -> dict:
+        if self._original_msg is not None:
+            return dict(self._original_msg)
         return {"role": self.role, "content": self.content}
 
     def __repr__(self) -> str:
@@ -89,37 +99,38 @@ class ImportanceScorer:
 
             # System messages are always preserved
             if role == "system":
-                scored.append(ScoredMessage(role, content, 1.0, i))
+                scored.append(ScoredMessage(role, content, 1.0, i, original_msg=msg))
                 continue
 
             # Recency: exponential decay, most recent = 1.0
             distance_from_end = n - 1 - i
-            recency = math.exp(
-                -distance_from_end * math.log(2) / self.recency_half_life
-            )
-
-            # Content signals
-            num = numeric_density(content)
-            explicit = explicit_density(content)
-            entities = named_entity_density(content)
-            code = code_density(content)
-            questions = question_density(content)
+            signals = self._compute_signals(content, distance_from_end)
 
             w = self.weights
-            score = (
-                w.recency_weight * recency
-                + w.numeric_weight * num
-                + w.explicit_weight * explicit
-                + w.named_entity_weight * entities
-                + w.code_weight * code
-                + w.question_weight * questions
+            score = sum(
+                getattr(w, f"{name}_weight") * value
+                for name, value in signals.items()
             )
 
             # Clamp to [0, 1]
             score = max(0.0, min(1.0, score))
-            scored.append(ScoredMessage(role, content, score, i))
+            scored.append(ScoredMessage(role, content, score, i, original_msg=msg))
 
         return scored
+
+    def _compute_signals(self, content: str, distance_from_end: int) -> dict[str, float]:
+        """Compute all signal values for a message's content."""
+        recency = math.exp(
+            -distance_from_end * math.log(2) / self.recency_half_life
+        )
+        return {
+            "recency": recency,
+            "numeric": numeric_density(content),
+            "explicit": explicit_density(content),
+            "named_entity": named_entity_density(content),
+            "code": code_density(content),
+            "question": question_density(content),
+        }
 
     def score_breakdown(self, message: dict, position: int, total: int) -> dict:
         """
@@ -133,25 +144,20 @@ class ImportanceScorer:
             return {"role": role, "final_score": 1.0, "reason": "system message always preserved"}
 
         distance_from_end = total - 1 - position
-        recency = math.exp(-distance_from_end * math.log(2) / self.recency_half_life)
+        signals = self._compute_signals(content, distance_from_end)
 
         w = self.weights
-        signals = {
-            "recency": (recency, w.recency_weight),
-            "numeric": (numeric_density(content), w.numeric_weight),
-            "explicit": (explicit_density(content), w.explicit_weight),
-            "named_entity": (named_entity_density(content), w.named_entity_weight),
-            "code": (code_density(content), w.code_weight),
-            "question": (question_density(content), w.question_weight),
+        weighted = {
+            name: (value, getattr(w, f"{name}_weight"))
+            for name, value in signals.items()
         }
-
-        final_score = sum(v * w for v, w in signals.values())
+        final_score = sum(v * wt for v, wt in weighted.values())
 
         return {
             "role": role,
             "signals": {
-                k: {"raw": v, "weight": w, "contribution": v * w}
-                for k, (v, w) in signals.items()
+                k: {"raw": v, "weight": wt, "contribution": v * wt}
+                for k, (v, wt) in weighted.items()
             },
             "final_score": round(min(1.0, final_score), 4),
         }

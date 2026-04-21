@@ -76,9 +76,6 @@ _CODE_KEYWORDS_RE = re.compile(
     r"SELECT |INSERT |UPDATE |DELETE |CREATE |DROP )\b"
 )
 
-# Questions
-_QUESTION_RE = re.compile(r"\?")
-
 
 def numeric_density(text: str) -> float:
     """Ratio of numeric-signal characters to total characters."""
@@ -115,7 +112,7 @@ def code_density(text: str) -> float:
 
 def question_density(text: str) -> float:
     """Whether the message contains questions."""
-    count = len(_QUESTION_RE.findall(text))
+    count = text.count("?")
     return min(count / 2.0, 1.0)
 
 

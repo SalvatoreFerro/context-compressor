@@ -26,6 +26,7 @@ from context_compressor.compression.config import CompressorConfig
 from context_compressor.compression.summarizer import ExtractiveSummarizer, Summarizer
 from context_compressor.compression.token_counter import (
     count_messages_tokens,
+    count_tokens,
     estimate_chars_for_tokens,
 )
 from context_compressor.scoring.scorer import ImportanceScorer, ScoredMessage
@@ -237,7 +238,10 @@ class ContextCompressor:
         for score, idx, msg in candidates:
             if current_tokens <= self.config.max_tokens:
                 break
-            msg_tokens = 4 + len((msg.get("content") or "").split()) + 1
+            content = msg.get("content") or ""
+            msg_tokens = 4 + count_tokens(content, self.config.model) + count_tokens(
+                msg.get("role", ""), self.config.model
+            )
             current_tokens -= msg_tokens
             to_drop.add(idx)
 
